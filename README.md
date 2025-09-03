@@ -191,7 +191,7 @@ TranslateApp-ios/
 │   └── Configuration/                   # App configuration
 │       └── AppConfig.swift
 ├── Core/
-│   ├── Redux/                          # Redux implementation
+│   ├── StateManagement/                # Unidirectional data flow (Redux implementation)
 │   │   ├── Store.swift                 # @MainActor Store class
 │   │   ├── Reducer.swift               # Reducer protocol
 │   │   ├── Effect.swift                # Effects system
