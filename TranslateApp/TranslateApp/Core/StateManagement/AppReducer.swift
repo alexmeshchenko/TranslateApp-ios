@@ -61,24 +61,28 @@ struct AppReducer: Reducer {
             
             return Effect { dispatch in
                 do {
-                    // TODO: Replace with real TranslationService call
-                    // let translation = try await TranslationService.shared.translate(
-                    //     text: text,
-                    //     from: source,
-                    //     to: target
-                    // )
+                    // Call real translation API
+                     let translation = try await TranslationService.shared.translate(
+                         text: text,
+                         from: source,
+                         to: target
+                     )
                     
-                    // Mock implementation for now
-                    try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
-                    
-                    // Create mock translation with language info
-                    let mockTranslation = Self.createMockTranslation(
-                        text: text,
-                        from: source,
-                        to: target
-                    )
-                    
-                    dispatch(.translationReceived(.success(mockTranslation)))
+//                    // Mock implementation for now
+//                    try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+//                    
+//                    // Create mock translation with language info
+//                    let mockTranslation = Self.createMockTranslation(
+//                        text: text,
+//                        from: source,
+//                        to: target
+//                    )
+//                    
+//                    dispatch(.translationReceived(.success(mockTranslation)))
+                    dispatch(.translationReceived(.success(translation)))
+                } catch let error as TranslationError {
+                    // Handle known translation errors
+                    dispatch(.translationReceived(.failure(error)))
                 } catch {
                     // Handle errors
                     let translationError = Self.mapToTranslationError(error)
@@ -267,7 +271,8 @@ struct AppReducer: Reducer {
     
     // MARK: - Private Helper Methods
         
-        /// Create mock translation for testing
+    /// Create mock translation for testing (kept for debugging)
+    #if DEBUG
         private static func createMockTranslation(
             text: String,
             from source: Language,
@@ -312,7 +317,7 @@ struct AppReducer: Reducer {
             // Default mock format
             return "[\(source.flag) → \(target.flag)] \(text)"
         }
-        
+#endif
         /// Map errors to TranslationError type
         private static func mapToTranslationError(_ error: Error) -> TranslationError {
             if let urlError = error as? URLError {
