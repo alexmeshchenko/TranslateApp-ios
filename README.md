@@ -193,13 +193,15 @@ TranslateApp-ios/
 ├── Core/
 │   ├── StateManagement/                # Unidirectional data flow (Redux implementation)
 │   │   ├── Store.swift                 # @MainActor Store class
-│   │   ├── Reducer.swift               # Reducer protocol
-│   │   ├── Effect.swift                # Effects system
-│   │   └── Middleware.swift            # Middleware support
+│   │   ├── AppState.swift              # Global application state
+│   │   ├── AppAction.swift             # All possible actions
+│   │   ├── AppReducer.swift            # Main reducer implementation
+│   │   ├── Reducer.swift               # Reducer protocol & AnyReducer
+│   │   └── Effect.swift                # Effects system
 │   ├── Models/
 │   │   ├── Language.swift              # Language model
-│   │   ├── Translation.swift           # Translation models
-│   │   └── TranslationError.swift     # Error types
+│   │   ├── TranslationError.swift      # Error types
+│   │   └── Translation.swift           # Translation response models
 │   └── Extensions/
 │       ├── View+Extensions.swift
 │       └── String+Extensions.swift
@@ -236,9 +238,10 @@ TranslateApp-ios/
 │   └── Info.plist
 └── Tests/
     ├── UnitTests/
-    │   ├── Redux/
+    │   ├── StateManagement/
     │   │   ├── StoreTests.swift
-    │   │   └── ReducerTests.swift
+    │   │   ├── AppReducerTests.swift
+    │   │   └── EffectTests.swift
     │   ├── Services/
     │   │   └── TranslationServiceTests.swift
     │   └── Mocks/
