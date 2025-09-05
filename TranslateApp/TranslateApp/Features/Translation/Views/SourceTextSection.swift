@@ -7,27 +7,13 @@
 
 import SwiftUI
 
-// MARK: - Source Text Section
 struct SourceTextSection: View {
     @EnvironmentObject var store: AppStore
     @FocusState private var isFocused: Bool
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label("Source Text", systemImage: "text.alignleft")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                if !store.state.sourceText.isEmpty {
-                    Text("\(store.state.sourceText.count) characters")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
-            
+        ZStack(alignment: .topTrailing) {
+            // Text Editor with placeholder
             ZStack(alignment: .topLeading) {
                 TextEditor(text: Binding(
                     get: { store.state.sourceText },
@@ -35,32 +21,47 @@ struct SourceTextSection: View {
                 ))
                 .focused($isFocused)
                 .frame(minHeight: 120)
-                .padding(8)
+                .padding(12)
+                .scrollContentBackground(.hidden)
                 .background(Color(.systemGray6))
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color(.systemGray4), lineWidth: 1)
-                )
+                .cornerRadius(10)
                 
+                // Placeholder
                 if store.state.sourceText.isEmpty && !isFocused {
                     Text("Enter text to translate...")
                         .foregroundColor(.secondary)
-                        .padding(12)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 20)
                         .allowsHitTesting(false)
                 }
             }
             
-            // Clear button
+            // Clear button overlay
             if !store.state.sourceText.isEmpty {
                 Button {
                     store.dispatch(.clearText)
+                    isFocused = false
                 } label: {
-                    Label("Clear", systemImage: "xmark.circle.fill")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(.secondary.opacity(0.6))
+                        .background(Circle().fill(Color(.systemBackground)))
                 }
+                .padding(8)
+                .transition(.scale.combined(with: .opacity))
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: store.state.sourceText.isEmpty)
     }
+}
+
+#Preview {
+    VStack(spacing: 20) {
+        Text("Standard Design")
+            .font(.headline)
+        SourceTextSection()
+        
+    }
+    .padding()
+    .environmentObject(Store.makeAppStore())
 }
