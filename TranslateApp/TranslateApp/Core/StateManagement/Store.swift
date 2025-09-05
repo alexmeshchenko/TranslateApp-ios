@@ -92,21 +92,33 @@ typealias AppStore = Store<AppState, AppAction>
 
 // MARK: - Store Creation Helper
 extension Store where State == AppState, Action == AppAction {
-    /// Create the main app store
     static func makeAppStore() -> AppStore {
-        let reducer = AnyReducer(AppReducer())
-            .logging()  // Add logging in debug builds
+        var initialState = AppState.initial
         
-        let store = AppStore(
-            initialState: .initial,
-            reducer: AnyReducer(reducer),
+        // Сразу загружаем сохраненные настройки
+        if let sourceCode = UserDefaults.standard.string(forKey: "sourceLanguage"),
+           let targetCode = UserDefaults.standard.string(forKey: "targetLanguage"),
+           let source = Language(rawValue: sourceCode),
+           let target = Language(rawValue: targetCode) {
+            initialState.sourceLanguage = source
+            initialState.targetLanguage = target
+            initialState.lastUsedLanguagePair = LanguagePair(source: source, target: target)
+        }
+        
+        if let favoritesCodes = UserDefaults.standard.array(forKey: "favoriteLanguages") as? [String] {
+            initialState.favoriteLanguages = Set(favoritesCodes.compactMap { Language(rawValue: $0) })
+        }
+        
+        let reducer = AnyReducer(AppReducer()).logging()
+        
+        return AppStore(
+            initialState: initialState,
+            reducer: reducer,
             middlewares: [
                 loggingMiddleware,
                 analyticsMiddleware
             ]
         )
-        
-        return store
     }
 }
 

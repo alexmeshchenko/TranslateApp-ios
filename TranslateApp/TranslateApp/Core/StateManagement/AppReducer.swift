@@ -110,20 +110,23 @@ struct AppReducer: Reducer {
             state.isShowingSourceLanguagePicker = false
             // Clear translation as language changed
             state.translatedText = ""
-            return .none
+            return .immediate(.saveLanguagePreferences)
             
         case .selectTargetLanguage(let language):
             state.targetLanguage = language
             state.isShowingTargetLanguagePicker = false
             // Clear translation as language changed
             state.translatedText = ""
-            return .none
+            return .immediate(.saveLanguagePreferences)
             
         case .swapLanguages:
-            // Swap languages
+            print("Before swap: \(state.sourceLanguage.displayName) → \(state.targetLanguage.displayName)")
+            
             let temp = state.sourceLanguage
             state.sourceLanguage = state.targetLanguage
             state.targetLanguage = temp
+            
+            print("After swap: \(state.sourceLanguage.displayName) → \(state.targetLanguage.displayName)")
             
             // Swap texts if translation exists
             if !state.translatedText.isEmpty {
@@ -131,7 +134,9 @@ struct AppReducer: Reducer {
                 state.sourceText = state.translatedText
                 state.translatedText = tempText
             }
-            return .none
+            
+            // Сохраняем после обмена
+            return .immediate(.saveLanguagePreferences)
             
         case .toggleSourceLanguagePicker:
             state.isShowingSourceLanguagePicker.toggle()

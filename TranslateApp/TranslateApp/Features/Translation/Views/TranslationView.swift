@@ -5,7 +5,6 @@
 //  Created by Aleksandr Meshchenko on 04.09.25.
 //
 
-
 import SwiftUI
 
 struct TranslationView: View {
@@ -16,7 +15,7 @@ struct TranslationView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Language selector bar
-                LanguageBarView()
+                CompactLanguageBar()
                 
                 Divider()
                 

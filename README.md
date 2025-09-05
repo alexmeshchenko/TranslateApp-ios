@@ -188,32 +188,36 @@ graph LR
 TranslateApp-ios/
 ├── App/
 │   ├── TranslateApp.swift              # App entry point
-│   └── Configuration/                   # App configuration
+│   └── Configuration/                   
 │       └── AppConfig.swift
 ├── Core/
-│   ├── StateManagement/                # Unidirectional data flow (Redux implementation)
-│   │   ├── Store.swift                 # @MainActor Store class
-│   │   ├── AppState.swift              # Global application state
-│   │   ├── AppAction.swift             # All possible actions
-│   │   ├── AppReducer.swift            # Main reducer implementation
-│   │   ├── Reducer.swift               # Reducer protocol & AnyReducer
-│   │   └── Effect.swift                # Effects system
+│   ├── StateManagement/                
+│   │   ├── Store.swift                 
+│   │   ├── AppState.swift              
+│   │   ├── AppAction.swift             
+│   │   ├── AppReducer.swift            
+│   │   ├── Reducer.swift               
+│   │   └── Effect.swift                
 │   ├── Models/
-│   │   ├── Language.swift              # Language model
-│   │   ├── TranslationError.swift      # Error types
-│   │   └── Translation.swift           # Translation response models
+│   │   ├── Language.swift              
+│   │   ├── TranslationError.swift      
+│   │   └── Translation.swift           
 │   └── Extensions/
+│       ├── HapticFeedback.swift        # Haptic feedback helper
 │       ├── View+Extensions.swift
 │       └── String+Extensions.swift
 ├── Features/
 │   ├── Translation/
+│   │   ├── Views/
+│   │   │   ├── TranslationView.swift          # Main translation screen
+│   │   │   ├── CompactLanguageBar.swift       # Language selector bar
+│   │   │   ├── LanguageMenu.swift             # Dropdown language menu
+│   │   │   ├── SourceTextSection.swift        # Input text field
+│   │   │   ├── ActionButtonsSection.swift     # Action buttons
+│   │   │   └── TranslatedTextSection.swift    # Translation result
 │   │   ├── State/
 │   │   │   ├── TranslationState.swift
 │   │   │   └── TranslationAction.swift
-│   │   ├── Views/
-│   │   │   ├── TranslationView.swift
-│   │   │   ├── TextInputView.swift
-│   │   │   └── LanguagePickerView.swift
 │   │   ├── Reducers/
 │   │   │   └── TranslationReducer.swift
 │   │   └── Effects/
@@ -225,9 +229,9 @@ TranslateApp-ios/
 │           └── SettingsState.swift
 ├── Services/
 │   ├── API/
-│   │   ├── TranslationService.swift    # API client
-│   │   ├── APIEndpoint.swift           # Endpoints enum
-│   │   └── NetworkError.swift          # Network errors
+│   │   ├── TranslationService.swift    # Translation API client
+│   │   ├── APIEndpoint.swift           
+│   │   └── NetworkError.swift          
 │   ├── Storage/
 │   │   └── UserDefaultsService.swift
 │   └── Audio/
