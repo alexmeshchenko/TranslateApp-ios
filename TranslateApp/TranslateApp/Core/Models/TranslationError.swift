@@ -11,7 +11,10 @@ import Foundation
 enum TranslationError: Error, Equatable {
     case networkError(String)
     case apiError(String)
+    case invalidURL
+    case invalidRequest
     case invalidResponse
+    case serverError
     case emptyInput
     case unsupportedLanguage
     case rateLimitExceeded
@@ -30,6 +33,12 @@ enum TranslationError: Error, Equatable {
             return "This language pair is not supported"
         case .rateLimitExceeded:
             return "Too many requests. Please try again later"
+        case .invalidURL:
+            return "Invalid URL configuration"
+        case .invalidRequest:
+            return "Invalid translation request"
+        case .serverError:
+            return "Server is temporarily unavailable"
         }
     }
 }

@@ -16,7 +16,7 @@ struct TranslationResponse: Codable {
     let destinationText: String
     let pronunciation: Pronunciation?
     let translations: Translations?
-    let definitions: [String]?
+    let definitions: [Definition]?
     let seeAlso: [String]?
     
     enum CodingKeys: String, CodingKey {
@@ -28,6 +28,23 @@ struct TranslationResponse: Codable {
         case translations
         case definitions
         case seeAlso = "see-also"
+    }
+}
+
+// MARK: - Definition
+struct Definition: Codable {
+    let partOfSpeech: String?
+    let definition: String?
+    let example: String?
+    let otherExamples: [String]?
+    let synonyms: [String]?
+    
+    enum CodingKeys: String, CodingKey {
+        case partOfSpeech = "part-of-speech"
+        case definition
+        case example
+        case otherExamples = "other-examples"
+        case synonyms
     }
 }
 

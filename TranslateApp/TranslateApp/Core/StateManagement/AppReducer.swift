@@ -16,12 +16,24 @@ struct AppReducer: Reducer {
     typealias State = AppState
     typealias Action = AppAction
     
+    enum DebounceID {
+        static let autoTranslateOnTyping = "autoTranslate.typing"
+        static let autoTranslateOnLanguageChange = "autoTranslate.languageChange"
+        static let autoTranslateOnSwap = "autoTranslate.swap"
+    }
+    
     func reduce(state: inout AppState, action: AppAction) -> Effect<AppAction> {
         switch action {
             // MARK: - Text Input Actions
         case .updateSourceText(let text):
             state.sourceText = text
             state.error = nil
+            
+            // Cancel the previous transfer if it is in process
+            if state.isLoading {
+                // Need to cancel here, but now just drop the flag
+                state.isLoading = false
+            }
             
             // If we clear the field - we clear the result and do not run anything
             if text.isEmpty {
@@ -32,9 +44,9 @@ struct AppReducer: Reducer {
             // auto-translation only if enabled
             guard state.isAutoTranslateEnabled else { return .none }
             
-            // Auto-translation with debounce (approximately 400 ms)
+            // Auto-translation with debounce (approximately 600 ms)
             // The previous deboot with the same id will be canceled at each new input
-            return Effect.debounce(id: "autoTranslate", for: 0.4) { .translate }
+            return Effect.debounce(id: DebounceID.autoTranslateOnTyping, for: 0.6) { .translate }
             
         case .clearText:
             state.sourceText = ""
@@ -57,9 +69,16 @@ struct AppReducer: Reducer {
             
             // MARK: - Translation Actions
         case .translate:
+            // Если уже идет загрузка - не запускаем новый запрос
+            guard !state.isLoading else {
+                return .none
+            }
+            
             // In case the debounce "shoots" at the moment when canTranslate == false,
             // we have the guard:
-            guard state.canTranslate else { return .none }
+            guard state.canTranslate && state.sourceText.count >= 2 else {
+                return .none
+            }
             
             state.isLoading = true
             state.error = nil
@@ -123,7 +142,7 @@ struct AppReducer: Reducer {
             
             let savePrefs = Effect.immediate(AppAction.saveLanguagePreferences)
             let maybeTranslate = (state.isAutoTranslateEnabled && !state.sourceText.isEmpty)
-                ? Effect.debounce(id: "autoTranslate", for: 0.2) { AppAction.translate }
+                ? Effect.debounce(id: DebounceID.autoTranslateOnLanguageChange, for: 0.2) { AppAction.translate }
                 : .none
             
             return .batch([savePrefs, maybeTranslate])
@@ -136,7 +155,7 @@ struct AppReducer: Reducer {
             
             let savePrefs = Effect.immediate(AppAction.saveLanguagePreferences)
             let maybeTranslate = (state.isAutoTranslateEnabled && !state.sourceText.isEmpty)
-                ? Effect.debounce(id: "autoTranslate", for: 0.2) { AppAction.translate }
+                ? Effect.debounce(id: DebounceID.autoTranslateOnLanguageChange, for: 0.2) { AppAction.translate }
                 : .none
             
             return .batch([savePrefs, maybeTranslate])
@@ -161,7 +180,7 @@ struct AppReducer: Reducer {
             // Easy debounce 200 ms is enough: the language change is usually a single action.
             let savePrefs = Effect.immediate(AppAction.saveLanguagePreferences)
             let maybeTranslate = (state.isAutoTranslateEnabled && !state.sourceText.isEmpty)
-                ? Effect.debounce(id: "autoTranslate", for: 0.2) { AppAction.translate }
+                ? Effect.debounce(id: DebounceID.autoTranslateOnSwap, for: 0.2) { AppAction.translate }
                 : .none
             
             return .batch([savePrefs, maybeTranslate])
@@ -198,12 +217,15 @@ struct AppReducer: Reducer {
             let text = state.sourceText
             let language = state.sourceLanguage
             
+            // Формируем URL для Google TTS
+            let audioURL = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=\(language.rawValue)&q=\(text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+
             return Effect { dispatch in
                 // TODO: Implement with TextToSpeechService
-                // await TextToSpeechService.shared.speak(text, language: language)
+                await TextToSpeechService.shared.playFromURL(audioURL)
                 
                 // Mock delay for now
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                //try? await Task.sleep(nanoseconds: 2_000_000_000)
                 dispatch(.audioPlaybackCompleted)
             }
             
@@ -324,54 +346,6 @@ struct AppReducer: Reducer {
     }
     
     // MARK: - Private Helper Methods
-    
-    /// Create mock translation for testing (kept for debugging)
-#if DEBUG
-    private static func createMockTranslation(
-        text: String,
-        from source: Language,
-        to target: Language
-    ) -> String {
-        // Simple mock translations for demo
-        let mockTranslations: [String: [Language: String]] = [
-            "Hello": [
-                .spanish: "Hola",
-                .french: "Bonjour",
-                .german: "Hallo",
-                .italian: "Ciao",
-                .portuguese: "Olá",
-                .russian: "Привет",
-                .chinese: "你好",
-                .japanese: "こんにちは",
-                .korean: "안녕하세요",
-                .arabic: "مرحبا",
-                .hindi: "नमस्ते"
-            ],
-            "Good morning": [
-                .spanish: "Buenos días",
-                .french: "Bonjour",
-                .german: "Guten Morgen",
-                .italian: "Buongiorno",
-                .portuguese: "Bom dia",
-                .russian: "Доброе утро",
-                .chinese: "早上好",
-                .japanese: "おはようございます",
-                .korean: "좋은 아침",
-                .arabic: "صباح الخير",
-                .hindi: "सुप्रभात"
-            ]
-        ]
-        
-        // Check if we have a mock translation
-        if let translations = mockTranslations[text],
-           let translation = translations[target] {
-            return translation
-        }
-        
-        // Default mock format
-        return "[\(source.flag) → \(target.flag)] \(text)"
-    }
-#endif
     /// Map errors to TranslationError type
     private static func mapToTranslationError(_ error: Error) -> TranslationError {
         if let urlError = error as? URLError {

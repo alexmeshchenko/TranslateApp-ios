@@ -54,6 +54,9 @@ struct AppState: Equatable {
     // Settings
     var isAutoTranslateEnabled: Bool = true
     var isSettingsPresented: Bool = false
+    
+    var lastSourceAudioURL: String?
+    var lastDestinationAudioURL: String?
 }
 
 

@@ -18,6 +18,7 @@ actor TranslationService {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 30
+        config.waitsForConnectivity = true
         self.session = URLSession(configuration: config)
     }
     
@@ -52,7 +53,21 @@ actor TranslationService {
         request.httpMethod = "GET"
         
         // Make request
-        let (data, response) = try await session.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            let result = try await session.data(for: request)
+            data = result.0
+            response = result.1
+        } catch {
+            print("❌ Network request failed: \(error)")
+            throw TranslationError.networkError(error.localizedDescription)
+        }
+        
+        // Raw data debugging
+        if let rawString = String(data: data, encoding: .utf8) {
+            print("📄 Raw response: \(rawString)")
+        }
         
         // Check response
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -63,20 +78,30 @@ actor TranslationService {
         
         switch httpResponse.statusCode {
         case 200:
-            // Parse the response based on the documented format
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                print("📥 Response structure: \(json.keys)")
+            let decoder = JSONDecoder()
+            do {
+                let response = try decoder.decode(TranslationResponse.self, from: data)
                 
-                // Extract destination-text from the response
-                if let destinationText = json["destination-text"] as? String {
-                    print("✅ Translation: \(destinationText)")
-                    return destinationText
+                print("✅ Translation: \(response.destinationText)")
+                
+                // Сохраняем аудио URL для последующего использования
+                if let sourceAudio = response.pronunciation?.sourceTextAudio {
+                    print("🔊 Source audio: \(sourceAudio)")
+                }
+                if let destAudio = response.pronunciation?.destinationTextAudio {
+                    print("🔊 Destination audio: \(destAudio)")
                 }
                 
-                print("⚠️ Could not find destination-text in response")
+                return response.destinationText
+            } catch {
+                print("❌ Decoding error: \(error)")
+                // Fallback на ручной парсинг
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let destinationText = json["destination-text"] as? String {
+                    return destinationText
+                }
+                throw TranslationError.invalidResponse
             }
-            
-            throw TranslationError.invalidResponse
             
         case 403:
             throw TranslationError.apiError("Access forbidden")
