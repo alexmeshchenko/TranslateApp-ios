@@ -26,6 +26,7 @@ struct TranslationView: View {
                         
                         // Action buttons
                         ActionButtonsSection()
+                            .background(Color.red)
                         
                         // Translated text output
                         TranslatedTextSection()
