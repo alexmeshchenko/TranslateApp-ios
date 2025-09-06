@@ -5,7 +5,7 @@
 [![Architecture](https://img.shields.io/badge/Architecture-Redux--like-green.svg)](https://redux.js.org/understanding/thinking-in-redux/motivation)
 [![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 
-A modern iOS translation application built with SwiftUI, featuring a custom Redux-like unidirectional data flow architecture. This educational project demonstrates state management patterns, API integration, and Swift 6 modern concurrency features.
+An iOS translation application built with SwiftUI, featuring a custom Redux-like unidirectional data flow architecture. This educational project demonstrates state management patterns, API integration, and Swift 6 modern concurrency features.
 <!--
 ## 📱 Screenshots
 
@@ -191,6 +191,12 @@ TranslateApp-ios/
 │   └── Configuration/                   
 │       └── AppConfig.swift
 ├── Core/
+│   ├── Components/                     # 
+│   │   ├── Buttons/
+│   │   │   ├── ClearButton.swift       # Clear text button
+│   │   │   └── AudioButton.swift       # Audio playback button
+│   │   └── Common/
+│   │       └── LoadingView.swift       # 
 │   ├── StateManagement/                
 │   │   ├── Store.swift                 
 │   │   ├── AppState.swift              
