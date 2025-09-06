@@ -29,12 +29,12 @@ struct AppReducer: Reducer {
                 return .none
             }
             
+            // auto-translation only if enabled
+            guard state.isAutoTranslateEnabled else { return .none }
+            
             // Auto-translation with debounce (approximately 400 ms)
             // The previous deboot with the same id will be canceled at each new input
-            return Effect.debounce(
-                id: "autoTranslate",
-                for: 0.4
-            ) { .translate }
+            return Effect.debounce(id: "autoTranslate", for: 0.4) { .translate }
             
         case .clearText:
             state.sourceText = ""
@@ -47,15 +47,15 @@ struct AppReducer: Reducer {
             let textToCopy = state.translatedText
             
             return Effect { dispatch in
-                #if os(iOS)
+#if os(iOS)
                 await MainActor.run {
                     UIPasteboard.general.string = textToCopy
                 }
-                #endif
+#endif
                 // TODO: Add success feedback
             }
             
-        // MARK: - Translation Actions
+            // MARK: - Translation Actions
         case .translate:
             // In case the debounce "shoots" at the moment when canTranslate == false,
             // we have the guard:
@@ -72,23 +72,23 @@ struct AppReducer: Reducer {
             return Effect { dispatch in
                 do {
                     // Call real translation API
-                     let translation = try await TranslationService.shared.translate(
-                         text: text,
-                         from: source,
-                         to: target
-                     )
+                    let translation = try await TranslationService.shared.translate(
+                        text: text,
+                        from: source,
+                        to: target
+                    )
                     
-//                    // Mock implementation for now
-//                    try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
-//                    
-//                    // Create mock translation with language info
-//                    let mockTranslation = Self.createMockTranslation(
-//                        text: text,
-//                        from: source,
-//                        to: target
-//                    )
-//                    
-//                    dispatch(.translationReceived(.success(mockTranslation)))
+                    //                    // Mock implementation for now
+                    //                    try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+                    //
+                    //                    // Create mock translation with language info
+                    //                    let mockTranslation = Self.createMockTranslation(
+                    //                        text: text,
+                    //                        from: source,
+                    //                        to: target
+                    //                    )
+                    //
+                    //                    dispatch(.translationReceived(.success(mockTranslation)))
                     dispatch(.translationReceived(.success(translation)))
                 } catch let error as TranslationError {
                     // Handle known translation errors
@@ -122,11 +122,10 @@ struct AppReducer: Reducer {
             state.translatedText = ""
             
             let savePrefs = Effect.immediate(AppAction.saveLanguagePreferences)
-            let maybeTranslate =
-                state.sourceText.isEmpty
-                ? .none
-                : Effect.debounce(id: "autoTranslate", for: 0.2) { AppAction.translate }
-
+            let maybeTranslate = (state.isAutoTranslateEnabled && !state.sourceText.isEmpty)
+                ? Effect.debounce(id: "autoTranslate", for: 0.2) { AppAction.translate }
+                : .none
+            
             return .batch([savePrefs, maybeTranslate])
             
         case .selectTargetLanguage(let language):
@@ -136,11 +135,10 @@ struct AppReducer: Reducer {
             state.translatedText = ""
             
             let savePrefs = Effect.immediate(AppAction.saveLanguagePreferences)
-            let maybeTranslate =
-                state.sourceText.isEmpty
-                ? .none
-                : Effect.debounce(id: "autoTranslate", for: 0.2) { AppAction.translate }
-
+            let maybeTranslate = (state.isAutoTranslateEnabled && !state.sourceText.isEmpty)
+                ? Effect.debounce(id: "autoTranslate", for: 0.2) { AppAction.translate }
+                : .none
+            
             return .batch([savePrefs, maybeTranslate])
             
         case .swapLanguages:
@@ -162,11 +160,10 @@ struct AppReducer: Reducer {
             // Save after exchange
             // Easy debounce 200 ms is enough: the language change is usually a single action.
             let savePrefs = Effect.immediate(AppAction.saveLanguagePreferences)
-            let maybeTranslate =
-                state.sourceText.isEmpty
-                ? .none
-                : Effect.debounce(id: "autoTranslate", for: 0.2) { AppAction.translate }
-
+            let maybeTranslate = (state.isAutoTranslateEnabled && !state.sourceText.isEmpty)
+                ? Effect.debounce(id: "autoTranslate", for: 0.2) { AppAction.translate }
+                : .none
+            
             return .batch([savePrefs, maybeTranslate])
             
         case .toggleSourceLanguagePicker:
@@ -179,7 +176,7 @@ struct AppReducer: Reducer {
             state.isShowingSourceLanguagePicker = false
             return .none
             
-        // MARK: - Favorite Languages (Advanced)
+            // MARK: - Favorite Languages (Advanced)
         case .toggleFavoriteLanguage(let language):
             if state.favoriteLanguages.contains(language) {
                 state.favoriteLanguages.remove(language)
@@ -193,7 +190,7 @@ struct AppReducer: Reducer {
             state.favoriteLanguages = languages
             return .immediate(.saveLanguagePreferences)
             
-        // MARK: - Audio Actions (Advanced)
+            // MARK: - Audio Actions (Advanced)
         case .playSourceAudio:
             guard !state.sourceText.isEmpty, state.isAudioEnabled else { return .none }
             
@@ -242,7 +239,7 @@ struct AppReducer: Reducer {
             }
             return .none
             
-        // MARK: - Persistence Actions (Advanced)
+            // MARK: - Persistence Actions (Advanced)
         case .saveLanguagePreferences:
             let pair = LanguagePair(
                 source: state.sourceLanguage,
@@ -286,7 +283,7 @@ struct AppReducer: Reducer {
             state.lastUsedLanguagePair = pair
             return .none
             
-        // MARK: - Error Handling
+            // MARK: - Error Handling
         case .clearError:
             state.error = nil
             return .none
@@ -296,78 +293,99 @@ struct AppReducer: Reducer {
             state.isLoading = false
             return .none
             
-        // MARK: - App Lifecycle
+            // MARK: - App Lifecycle
         case .appDidBecomeActive:
             return .immediate(.loadLanguagePreferences)
             
         case .appWillResignActive:
             return .immediate(.saveLanguagePreferences)
+            
+        // React to settings screens and load/save.
+        // Take into account auto-translation in updateSourceText and when changing languages.
+        case .setSettingsPresented(let presented):
+            state.isSettingsPresented = presented
+            return .none
+
+        case .setAutoTranslate(let isOn):
+            state.isAutoTranslateEnabled = isOn
+            UserDefaults.standard.set(isOn, forKey: "autoTranslateEnabled")
+
+            // Если включили авто-перевод и есть текст - сразу дернём перевод с лёгким дебаунсом
+            guard isOn, !state.sourceText.isEmpty else { return .none }
+            return Effect.debounce(id: "autoTranslate", for: 0.2) { .translate }
+
+        case .loadUserPreferences:
+            if UserDefaults.standard.object(forKey: "autoTranslateEnabled") != nil {
+                state.isAutoTranslateEnabled = UserDefaults.standard.bool(forKey: "autoTranslateEnabled")
+            }
+            return .none
         }
+        
     }
     
     // MARK: - Private Helper Methods
-        
+    
     /// Create mock translation for testing (kept for debugging)
-    #if DEBUG
-        private static func createMockTranslation(
-            text: String,
-            from source: Language,
-            to target: Language
-        ) -> String {
-            // Simple mock translations for demo
-            let mockTranslations: [String: [Language: String]] = [
-                "Hello": [
-                    .spanish: "Hola",
-                    .french: "Bonjour",
-                    .german: "Hallo",
-                    .italian: "Ciao",
-                    .portuguese: "Olá",
-                    .russian: "Привет",
-                    .chinese: "你好",
-                    .japanese: "こんにちは",
-                    .korean: "안녕하세요",
-                    .arabic: "مرحبا",
-                    .hindi: "नमस्ते"
-                ],
-                "Good morning": [
-                    .spanish: "Buenos días",
-                    .french: "Bonjour",
-                    .german: "Guten Morgen",
-                    .italian: "Buongiorno",
-                    .portuguese: "Bom dia",
-                    .russian: "Доброе утро",
-                    .chinese: "早上好",
-                    .japanese: "おはようございます",
-                    .korean: "좋은 아침",
-                    .arabic: "صباح الخير",
-                    .hindi: "सुप्रभात"
-                ]
+#if DEBUG
+    private static func createMockTranslation(
+        text: String,
+        from source: Language,
+        to target: Language
+    ) -> String {
+        // Simple mock translations for demo
+        let mockTranslations: [String: [Language: String]] = [
+            "Hello": [
+                .spanish: "Hola",
+                .french: "Bonjour",
+                .german: "Hallo",
+                .italian: "Ciao",
+                .portuguese: "Olá",
+                .russian: "Привет",
+                .chinese: "你好",
+                .japanese: "こんにちは",
+                .korean: "안녕하세요",
+                .arabic: "مرحبا",
+                .hindi: "नमस्ते"
+            ],
+            "Good morning": [
+                .spanish: "Buenos días",
+                .french: "Bonjour",
+                .german: "Guten Morgen",
+                .italian: "Buongiorno",
+                .portuguese: "Bom dia",
+                .russian: "Доброе утро",
+                .chinese: "早上好",
+                .japanese: "おはようございます",
+                .korean: "좋은 아침",
+                .arabic: "صباح الخير",
+                .hindi: "सुप्रभात"
             ]
-            
-            // Check if we have a mock translation
-            if let translations = mockTranslations[text],
-               let translation = translations[target] {
-                return translation
-            }
-            
-            // Default mock format
-            return "[\(source.flag) → \(target.flag)] \(text)"
+        ]
+        
+        // Check if we have a mock translation
+        if let translations = mockTranslations[text],
+           let translation = translations[target] {
+            return translation
         }
+        
+        // Default mock format
+        return "[\(source.flag) → \(target.flag)] \(text)"
+    }
 #endif
-        /// Map errors to TranslationError type
-        private static func mapToTranslationError(_ error: Error) -> TranslationError {
-            if let urlError = error as? URLError {
-                switch urlError.code {
-                case .notConnectedToInternet:
-                    return .networkError("No internet connection")
-                case .timedOut:
-                    return .networkError("Request timed out")
-                default:
-                    return .networkError(urlError.localizedDescription)
-                }
+    /// Map errors to TranslationError type
+    private static func mapToTranslationError(_ error: Error) -> TranslationError {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet:
+                return .networkError("No internet connection")
+            case .timedOut:
+                return .networkError("Request timed out")
+            default:
+                return .networkError(urlError.localizedDescription)
             }
-            
-            // Default error
-            return .apiError(error.localizedDescription)
         }
+        
+        // Default error
+        return .apiError(error.localizedDescription)
+    }
 }

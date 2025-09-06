@@ -38,8 +38,6 @@ struct ActionButtonsSection: View {
                         .tint(.white)
                         .transition(.scale.combined(with: .opacity))
                 } else {
-                    Image(systemName: "translate")
-                        .symbolEffect(.pulse, value: store.state.isLoading)
                     Text("Translate")
                 }
             }

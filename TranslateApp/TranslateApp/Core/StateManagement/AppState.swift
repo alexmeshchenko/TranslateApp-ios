@@ -50,6 +50,10 @@ struct AppState: Equatable {
     
     /// Currently playing audio (source or target)
     var playingAudio: AudioPlayback? = nil
+    
+    // Settings
+    var isAutoTranslateEnabled: Bool = true
+    var isSettingsPresented: Bool = false
 }
 
 

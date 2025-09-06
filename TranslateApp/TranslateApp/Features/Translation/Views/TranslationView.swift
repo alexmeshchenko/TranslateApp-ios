@@ -40,11 +40,24 @@ struct TranslationView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         // TODO: Show settings
+                        store.dispatch(.setSettingsPresented(true))
                     } label: {
                         Image(systemName: "gearshape")
                     }
                 }
             }
+            .sheet(isPresented: Binding(
+                get: { store.state.isSettingsPresented },
+                set: { store.dispatch(.setSettingsPresented($0)) }
+            )) {
+                SettingsView().environmentObject(store)
+            }
+            .task {
+                // Upload saved custom settings once
+                store.dispatch(.loadUserPreferences)
+            }
+
+            
         }
     }
 }
