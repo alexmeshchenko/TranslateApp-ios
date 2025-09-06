@@ -18,15 +18,23 @@ struct AppReducer: Reducer {
     
     func reduce(state: inout AppState, action: AppAction) -> Effect<AppAction> {
         switch action {
-        // MARK: - Text Input Actions
+            // MARK: - Text Input Actions
         case .updateSourceText(let text):
             state.sourceText = text
             state.error = nil
-            // Clear translation if source text is empty
+            
+            // If we clear the field - we clear the result and do not run anything
             if text.isEmpty {
                 state.translatedText = ""
+                return .none
             }
-            return .none
+            
+            // Auto-translation with debounce (approximately 400 ms)
+            // The previous deboot with the same id will be canceled at each new input
+            return Effect.debounce(
+                id: "autoTranslate",
+                for: 0.4
+            ) { .translate }
             
         case .clearText:
             state.sourceText = ""
@@ -49,6 +57,8 @@ struct AppReducer: Reducer {
             
         // MARK: - Translation Actions
         case .translate:
+            // In case the debounce "shoots" at the moment when canTranslate == false,
+            // we have the guard:
             guard state.canTranslate else { return .none }
             
             state.isLoading = true
@@ -110,14 +120,28 @@ struct AppReducer: Reducer {
             state.isShowingSourceLanguagePicker = false
             // Clear translation as language changed
             state.translatedText = ""
-            return .immediate(.saveLanguagePreferences)
+            
+            let savePrefs = Effect.immediate(AppAction.saveLanguagePreferences)
+            let maybeTranslate =
+                state.sourceText.isEmpty
+                ? .none
+                : Effect.debounce(id: "autoTranslate", for: 0.2) { AppAction.translate }
+
+            return .batch([savePrefs, maybeTranslate])
             
         case .selectTargetLanguage(let language):
             state.targetLanguage = language
             state.isShowingTargetLanguagePicker = false
             // Clear translation as language changed
             state.translatedText = ""
-            return .immediate(.saveLanguagePreferences)
+            
+            let savePrefs = Effect.immediate(AppAction.saveLanguagePreferences)
+            let maybeTranslate =
+                state.sourceText.isEmpty
+                ? .none
+                : Effect.debounce(id: "autoTranslate", for: 0.2) { AppAction.translate }
+
+            return .batch([savePrefs, maybeTranslate])
             
         case .swapLanguages:
             print("Before swap: \(state.sourceLanguage.displayName) → \(state.targetLanguage.displayName)")
@@ -135,8 +159,15 @@ struct AppReducer: Reducer {
                 state.translatedText = tempText
             }
             
-            // Сохраняем после обмена
-            return .immediate(.saveLanguagePreferences)
+            // Save after exchange
+            // Easy debounce 200 ms is enough: the language change is usually a single action.
+            let savePrefs = Effect.immediate(AppAction.saveLanguagePreferences)
+            let maybeTranslate =
+                state.sourceText.isEmpty
+                ? .none
+                : Effect.debounce(id: "autoTranslate", for: 0.2) { AppAction.translate }
+
+            return .batch([savePrefs, maybeTranslate])
             
         case .toggleSourceLanguagePicker:
             state.isShowingSourceLanguagePicker.toggle()
