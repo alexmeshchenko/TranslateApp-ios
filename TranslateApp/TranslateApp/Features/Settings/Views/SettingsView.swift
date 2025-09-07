@@ -20,7 +20,7 @@ struct SettingsView: View {
     private var audioBinding: Binding<Bool> {
         Binding(
             get: { store.state.isAudioEnabled },
-            set: { _ in store.dispatch(.toggleAudioFeature) } // у тебя уже есть toggleAudioFeature
+            set: { _ in store.dispatch(.toggleAudioFeature) } // we already have toggleAudioFeature
         )
     }
 

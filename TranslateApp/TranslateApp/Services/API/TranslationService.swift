@@ -84,7 +84,7 @@ actor TranslationService {
                 
                 print("✅ Translation: \(response.destinationText)")
                 
-                // Сохраняем аудио URL для последующего использования
+                // Save the audio URL for later use
                 if let sourceAudio = response.pronunciation?.sourceTextAudio {
                     print("🔊 Source audio: \(sourceAudio)")
                 }
@@ -95,7 +95,7 @@ actor TranslationService {
                 return response.destinationText
             } catch {
                 print("❌ Decoding error: \(error)")
-                // Fallback на ручной парсинг
+                // Fallback on manual parsing
                 if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let destinationText = json["destination-text"] as? String {
                     return destinationText

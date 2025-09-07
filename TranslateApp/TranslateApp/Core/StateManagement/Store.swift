@@ -95,7 +95,7 @@ extension Store where State == AppState, Action == AppAction {
     static func makeAppStore() -> AppStore {
         var initialState = AppState.initial
         
-        // Сразу загружаем сохраненные настройки
+        // Load saved settings immediately
         if let sourceCode = UserDefaults.standard.string(forKey: "sourceLanguage"),
            let targetCode = UserDefaults.standard.string(forKey: "targetLanguage"),
            let source = Language(rawValue: sourceCode),

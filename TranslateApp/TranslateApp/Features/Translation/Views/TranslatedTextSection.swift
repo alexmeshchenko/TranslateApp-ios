@@ -12,80 +12,105 @@ struct TranslatedTextSection: View {
     @EnvironmentObject var store: AppStore
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                
-                Spacer()
-                
-                if !store.state.translatedText.isEmpty {
-                    // Copy button
-                    Button {
-                        store.dispatch(.copyTranslation)
-                    } label: {
-                        Label("Copy", systemImage: "doc.on.doc")
-                            .font(.caption)
-                    }
+        ZStack(alignment: .topLeading) {
+            // Layer 1: Background flag
+            BackgroundFlagLayer(language: store.state.targetLanguage)
+                .opacity(0.5)
+            
+            // Layer 2: Content
+            ContentLayer(
+                isLoading: store.state.isLoading,
+                error: store.state.error,
+                translatedText: store.state.translatedText
+            )
+            
+            // Layer 3: Overlay buttons
+            if !store.state.translatedText.isEmpty {
+                HStack {
+                    Spacer()
                     
-                    // Audio button
-                    if store.state.isAudioEnabled {
+                    VStack {
                         Button {
-                            store.dispatch(.playTranslatedAudio)
+                            store.dispatch(.copyTranslation)
                         } label: {
-                            Image(systemName: store.state.playingAudio == .target ? "speaker.wave.2.fill" : "speaker.wave.2")
-                                .font(.caption)
+                            Image(systemName: "doc.on.doc")
+                                .font(.system(size: 16))
+                                .foregroundColor(.blue)
+                                .frame(width: 30, height: 30)
+                                .background(Circle().fill(Color(.systemBackground)))
+                                .shadow(radius: 1)
+                        }
+                        
+                        Spacer()
+                        
+                        if store.state.isAudioEnabled {
+                            AudioButton(
+                                isPlaying: store.state.playingAudio == .target,
+                                action: {
+                                    store.dispatch(.playTranslatedAudio)
+                                }
+                            )
                         }
                     }
+                    .padding(8)
                 }
             }
-            
-            // Translation result
-            ZStack(alignment: .topLeading) {
-                if store.state.isLoading {
-                    HStack {
-                        Spacer()
-                        VStack {
-                            ProgressView()
-                            Text("Translating...")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding()
-                        Spacer()
-                    }
-                    .frame(minHeight: 120)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
-                } else if let error = store.state.error {
-                    VStack {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.largeTitle)
-                            .foregroundColor(.orange)
-                        Text(error.localizedDescription)
+        }
+        .frame(minHeight: 120)
+        .background(Color(.systemGray6).opacity(0.5))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color(.systemGray3), lineWidth: 1)
+        )
+        .cornerRadius(10)
+    }
+}
+
+struct ContentLayer: View {
+    let isLoading: Bool
+    let error: TranslationError?
+    let translatedText: String
+    
+    var body: some View {
+        Group {
+            if isLoading {
+                HStack {
+                    Spacer()
+                    VStack(spacing: 8) {
+                        ProgressView()
+                            .scaleEffect(0.9)
+                        Text("Translating...")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: 120)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
-                } else if !store.state.translatedText.isEmpty {
-                    Text(store.state.translatedText)
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .frame(minHeight: 120)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
-                        .textSelection(.enabled)
-                } else {
-                    Text("Translation will appear here...")
-                        .foregroundColor(.secondary)
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .frame(minHeight: 120)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
+                    .padding()
+                    Spacer()
                 }
+            } else if let error = error {
+                VStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 32))
+                        .foregroundColor(.orange)
+                    Text(error.localizedDescription)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if !translatedText.isEmpty {
+                ScrollView {
+                    Text(translatedText)
+                        .padding()
+                        .padding(.trailing, 40) // for buttons
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
+            } else {
+                Text("Translation will appear here...")
+                    .foregroundColor(.secondary)
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

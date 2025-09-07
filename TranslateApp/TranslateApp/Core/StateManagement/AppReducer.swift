@@ -69,7 +69,7 @@ struct AppReducer: Reducer {
             
             // MARK: - Translation Actions
         case .translate:
-            // Если уже идет загрузка - не запускаем новый запрос
+            // If you are already loading - do not start a new request
             guard !state.isLoading else {
                 return .none
             }
@@ -217,7 +217,7 @@ struct AppReducer: Reducer {
             let text = state.sourceText
             let language = state.sourceLanguage
             
-            // Формируем URL для Google TTS
+            // Create URL for Google TTS
             let audioURL = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=\(language.rawValue)&q=\(text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
 
             return Effect { dispatch in
@@ -236,15 +236,13 @@ struct AppReducer: Reducer {
             let text = state.translatedText
             let language = state.targetLanguage
             
-            return Effect { dispatch in
-                // TODO: Implement with TextToSpeechService
-                // await TextToSpeechService.shared.speak(text, language: language)
+            // Create URL for Google TTS
+                let audioURL = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=\(language.rawValue)&q=\(text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
                 
-                // Mock delay for now
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                dispatch(.audioPlaybackCompleted)
-            }
-            
+                return Effect { dispatch in
+                    await TextToSpeechService.shared.playFromURL(audioURL)
+                    dispatch(.audioPlaybackCompleted)
+                }
         case .stopAudio:
             state.playingAudio = nil
             // TODO: Stop TextToSpeechService
@@ -332,7 +330,7 @@ struct AppReducer: Reducer {
             state.isAutoTranslateEnabled = isOn
             UserDefaults.standard.set(isOn, forKey: "autoTranslateEnabled")
 
-            // Если включили авто-перевод и есть текст - сразу дернём перевод с лёгким дебаунсом
+            // If you have auto-translation and there is text - just pull the translation with a light debounce
             guard isOn, !state.sourceText.isEmpty else { return .none }
             return Effect.debounce(id: "autoTranslate", for: 0.2) { .translate }
 
