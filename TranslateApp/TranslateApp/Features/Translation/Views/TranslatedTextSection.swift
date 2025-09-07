@@ -14,9 +14,6 @@ struct TranslatedTextSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Label("Translation", systemImage: "text.alignright")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
                 
                 Spacer()
                 
