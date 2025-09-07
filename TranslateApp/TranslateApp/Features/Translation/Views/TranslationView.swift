@@ -26,7 +26,6 @@ struct TranslationView: View {
                         
                         // Action buttons
                         ActionButtonsSection()
-                            .background(Color.red)
                         
                         // Translated text output
                         TranslatedTextSection()
@@ -56,7 +55,7 @@ struct TranslationView: View {
                 // Upload saved custom settings once
                 store.dispatch(.loadUserPreferences)
             }
-
+            
             
         }
     }
