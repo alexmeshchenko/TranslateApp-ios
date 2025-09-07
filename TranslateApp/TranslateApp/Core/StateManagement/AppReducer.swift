@@ -124,12 +124,16 @@ struct AppReducer: Reducer {
             
             switch result {
             case .success(let translation):
-                state.translatedText = translation
+                state.translatedText = translation.text
+                state.lastSourceAudioURL = translation.sourceAudioURL
+                state.lastDestinationAudioURL = translation.destinationAudioURL
                 state.error = nil
                 
             case .failure(let error):
                 state.error = error
                 state.translatedText = ""
+                state.lastSourceAudioURL = nil
+                state.lastDestinationAudioURL = nil
             }
             return .none
             
@@ -211,38 +215,34 @@ struct AppReducer: Reducer {
             
             // MARK: - Audio Actions (Advanced)
         case .playSourceAudio:
-            guard !state.sourceText.isEmpty, state.isAudioEnabled else { return .none }
+            guard !state.sourceText.isEmpty,
+                  state.isAudioEnabled else { return .none }
             
             state.playingAudio = .source
             let text = state.sourceText
             let language = state.sourceLanguage
             
-            // Create URL for Google TTS
-            let audioURL = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=\(language.rawValue)&q=\(text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
-
+            // If there is a saved URL from the API - use it
+            // If not - build ourselves
+            let audioURL = state.lastSourceAudioURL ??
+                "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=\(language.rawValue)&q=\(text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+            
             return Effect { dispatch in
-                // TODO: Implement with TextToSpeechService
                 await TextToSpeechService.shared.playFromURL(audioURL)
-                
-                // Mock delay for now
-                //try? await Task.sleep(nanoseconds: 2_000_000_000)
                 dispatch(.audioPlaybackCompleted)
             }
             
         case .playTranslatedAudio:
-            guard !state.translatedText.isEmpty, state.isAudioEnabled else { return .none }
+            guard !state.translatedText.isEmpty,
+                  state.isAudioEnabled,
+                  let audioURL = state.lastDestinationAudioURL else { return .none }
             
             state.playingAudio = .target
-            let text = state.translatedText
-            let language = state.targetLanguage
             
-            // Create URL for Google TTS
-                let audioURL = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=\(language.rawValue)&q=\(text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
-                
-                return Effect { dispatch in
-                    await TextToSpeechService.shared.playFromURL(audioURL)
-                    dispatch(.audioPlaybackCompleted)
-                }
+            return Effect { dispatch in
+                await TextToSpeechService.shared.playFromURL(audioURL)
+                dispatch(.audioPlaybackCompleted)
+            }
         case .stopAudio:
             state.playingAudio = nil
             // TODO: Stop TextToSpeechService

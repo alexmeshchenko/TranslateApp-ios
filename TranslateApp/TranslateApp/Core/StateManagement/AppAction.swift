@@ -18,7 +18,7 @@ enum AppAction: Equatable {
     
     // MARK: - Translation Actions
     case translate /// Initiate translation request
-    case translationReceived(Result<String, TranslationError>) /// response  from API
+    case translationReceived(Result<TranslationResult, TranslationError>) /// response  from API
     
     // MARK: - Language Selection Actions
     case selectSourceLanguage(Language)

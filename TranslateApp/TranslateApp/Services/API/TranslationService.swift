@@ -7,6 +7,12 @@
 
 import Foundation
 
+struct TranslationResult: Equatable {
+    let text: String
+    let sourceAudioURL: String?
+    let destinationAudioURL: String?
+}
+
 // MARK: - Translation Service
 actor TranslationService {
     static let shared = TranslationService()
@@ -16,8 +22,8 @@ actor TranslationService {
     
     private init() {
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        config.timeoutIntervalForResource = 30
+        config.timeoutIntervalForRequest = 10
+        config.timeoutIntervalForResource = 15
         config.waitsForConnectivity = true
         self.session = URLSession(configuration: config)
     }
@@ -26,8 +32,9 @@ actor TranslationService {
     func translate(
         text: String,
         from source: Language,
-        to target: Language
-    ) async throws -> String {
+        to target: Language,
+        retryCount: Int = 1
+    ) async throws -> TranslationResult {
         // Validate input
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw TranslationError.emptyInput
@@ -61,6 +68,13 @@ actor TranslationService {
             response = result.1
         } catch {
             print("❌ Network request failed: \(error)")
+            
+            if retryCount > 0 {
+                print("🔄 Retrying... (\(retryCount) attempts left)")
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                return try await translate(text: text, from: source, to: target, retryCount: retryCount - 1)
+            }
+            
             throw TranslationError.networkError(error.localizedDescription)
         }
         
@@ -84,21 +98,37 @@ actor TranslationService {
                 
                 print("✅ Translation: \(response.destinationText)")
                 
-                // Save the audio URL for later use
                 if let sourceAudio = response.pronunciation?.sourceTextAudio {
                     print("🔊 Source audio: \(sourceAudio)")
                 }
                 if let destAudio = response.pronunciation?.destinationTextAudio {
                     print("🔊 Destination audio: \(destAudio)")
                 }
-                
-                return response.destinationText
+
+                return TranslationResult(
+                    text: response.destinationText,
+                    sourceAudioURL: response.pronunciation?.sourceTextAudio,
+                    destinationAudioURL: response.pronunciation?.destinationTextAudio
+                )
             } catch {
                 print("❌ Decoding error: \(error)")
-                // Fallback on manual parsing
+                // Fallback на ручной парсинг
                 if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let destinationText = json["destination-text"] as? String {
-                    return destinationText
+                    
+                    var sourceAudio: String?
+                    var destAudio: String?
+                    
+                    if let pronunciation = json["pronunciation"] as? [String: Any] {
+                        sourceAudio = pronunciation["source-text-audio"] as? String
+                        destAudio = pronunciation["destination-text-audio"] as? String
+                    }
+                    
+                    return TranslationResult(
+                        text: destinationText,
+                        sourceAudioURL: sourceAudio,
+                        destinationAudioURL: destAudio
+                    )
                 }
                 throw TranslationError.invalidResponse
             }
@@ -112,7 +142,13 @@ actor TranslationService {
         case 400...499:
             throw TranslationError.apiError("Invalid request (Status: \(httpResponse.statusCode))")
             
-        case 500...599:
+        case 500, 501:
+            throw TranslationError.apiError("Server error")
+            
+        case 502, 503, 504:
+            throw TranslationError.serverUnavailable(code: httpResponse.statusCode)
+            
+        case 505...599:
             throw TranslationError.apiError("Server error")
             
         default:

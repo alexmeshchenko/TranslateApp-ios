@@ -20,8 +20,8 @@ extension AppAction: CustomStringConvertible {
             return "translate"
         case .translationReceived(let result):
             switch result {
-            case .success(let text):
-                return "translationReceived(success: \(text.prefix(20))...)"
+            case .success(let translation):
+                return "translationReceived(success: \(translation.text.prefix(20))...)"
             case .failure(let error):
                 return "translationReceived(failure: \(error))"
             }

@@ -62,13 +62,11 @@ struct Pronunciation: Codable {
 }
 
 // MARK: - Translations
-struct Translations: Codable {
-    let allTranslations: [String]?
+struct Translations: Codable, Equatable {
     let possibleTranslations: [String]?
     let possibleMistakes: [String]?
     
     enum CodingKeys: String, CodingKey {
-        case allTranslations = "all-translations"
         case possibleTranslations = "possible-translations"
         case possibleMistakes = "possible-mistakes"
     }

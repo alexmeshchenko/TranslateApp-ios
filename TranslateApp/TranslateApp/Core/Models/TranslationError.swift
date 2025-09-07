@@ -18,9 +18,13 @@ enum TranslationError: Error, Equatable {
     case emptyInput
     case unsupportedLanguage
     case rateLimitExceeded
+    case serverUnavailable(code: Int)
     
     var localizedDescription: String {
         switch self {
+        case .serverUnavailable(let code):
+                    return "Translation service is temporarily unavailable (Error \(code)). Please try again later."
+
         case .networkError(let message):
             return "Network error: \(message)"
         case .apiError(let message):
