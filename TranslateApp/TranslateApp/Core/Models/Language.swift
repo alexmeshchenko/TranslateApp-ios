@@ -23,7 +23,6 @@ enum Language: String, CaseIterable, Codable, Hashable {
     case arabic = "ar"
     case hindi = "hi"
     
-    // Additional popular languages
     case dutch = "nl"
     case polish = "pl"
     case turkish = "tr"
